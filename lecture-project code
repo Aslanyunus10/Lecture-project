@@ -1,0 +1,91 @@
+import random
+import time
+from threading import Thread, Event
+
+class EventBus:
+    def __init__(self):
+        self.listeners = {}
+
+    def subscribe(self, event_type, listener):
+        if event_type not in self.listeners:
+            self.listeners[event_type] = []
+        self.listeners[event_type].append(listener)
+
+    def emit(self, event_type, data):
+        if event_type in self.listeners:
+            for listener in self.listeners[event_type]:
+                listener(data)
+
+class TrafficManager:
+    def __init__(self, event_bus):
+        self.event_bus = event_bus
+        self.event_bus.subscribe("emergency", self.handle_emergency)
+
+    def monitor_traffic(self):
+        while True:
+            traffic_level = random.randint(1, 10)  # Simulating traffic levels
+            print(f"[TrafficManager] Traffic level: {traffic_level}")
+            if traffic_level > 7:
+                self.event_bus.emit("traffic_alert", {"level": traffic_level})
+            time.sleep(3)
+
+    def handle_emergency(self, data):
+        print(f"[TrafficManager] Adjusting traffic for emergency at {data['location']}")
+
+class EmergencyManager:
+    def __init__(self, event_bus):
+        self.event_bus = event_bus
+
+    def detect_emergency(self):
+        while True:
+            if random.choice([True, False]):
+                location = random.choice(["Sector 1", "Sector 2", "Sector 3"])
+                print(f"[EmergencyManager] Emergency detected at {location}")
+                self.event_bus.emit("emergency", {"location": location})
+            time.sleep(5)
+
+class EnvironmentManager:
+    def __init__(self, event_bus):
+        self.event_bus = event_bus
+
+    def monitor_environment(self):
+        while True:
+            air_quality = random.randint(1, 100)  # Simulating air quality index
+            print(f"[EnvironmentManager] Air Quality Index: {air_quality}")
+            if air_quality < 50:
+                self.event_bus.emit("environment_alert", {"air_quality": air_quality})
+            time.sleep(4)
+
+class CitizenInteraction:
+    def __init__(self, event_bus):
+        self.event_bus = event_bus
+        self.event_bus.subscribe("traffic_alert", self.notify_citizens)
+        self.event_bus.subscribe("environment_alert", self.notify_citizens)
+
+    def notify_citizens(self, data):
+        print(f"[CitizenInteraction] Alert: {data}")
+
+if __name__ == "__main__":
+    event_bus = EventBus()
+
+    traffic_manager = TrafficManager(event_bus)
+    emergency_manager = EmergencyManager(event_bus)
+    environment_manager = EnvironmentManager(event_bus)
+    citizen_interaction = CitizenInteraction(event_bus)
+
+    threads = [
+        Thread(target=traffic_manager.monitor_traffic),
+        Thread(target=emergency_manager.detect_emergency),
+        Thread(target=environment_manager.monitor_environment),
+    ]
+
+    for thread in threads:
+        thread.daemon = True
+        thread.start()
+
+    print("[System] Smart City Management System is running...")
+    try:
+        while True:
+            time.sleep(1)  # Keep the main thread alive
+    except KeyboardInterrupt:
+        print("[System] Shutting down...")
